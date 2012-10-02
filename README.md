@@ -3,7 +3,8 @@ js-contract
 
 JavaScript Design By Contract implementation
 
-== Using
+Using
+<pre>
 <code class="javascript">
 var sqrt = (function( x ){ return Math.sqrt(x); })
     .expect( 'number' )
@@ -15,3 +16,4 @@ sqrt( 1 ) // => 1
 sqrt( -1 ) // => TypeError
 sqrt( 'hello' ) // => TypeError
 <code>
+</pre>
