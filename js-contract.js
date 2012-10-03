@@ -3,19 +3,6 @@
  * October 2012
  */
 
-/*
-    // using
-    var sqrt = (function( x ){ return Math.sqrt(x); })
-        .expect( 'number' )
-        .require( function( x ){ return x >= 0; } )
-        .returns( 'number' )
-        .ensure( function( res ){ return res >= 0; } );
-
-    sqrt( 1 ) // => 1
-    sqrt( -1 ) // => TypeError
-    sqrt( 'hello' ) // => TypeError
-*/
-
 (function jsContract(){
 
     var tests = {
@@ -46,13 +33,45 @@
     };
 
 
-    // define new exception type
-    function ContractViolationError( message, /*string?*/ fileName, /*number?*/ lineNumber ){
-        this.message = message;
-        Error.apply( this, arguments );
+    define( 'expect', function( contract /*,...rest*/ ){
+        contract.expect = Array.prototype.slice.call( arguments, 1 );
+    });
+
+
+    define( 'require', function( contract, requireFn ){
+        if ( contract.require instanceof Array )
+            contract.require.push( requireFn );
+        else
+            contract.require = [requireFn];
+    });
+
+
+    define( 'returns', function( contract, rule ){
+        contract.returns = rule;
+    });
+
+
+    define( 'ensure', function( contract, ensureFn ){
+        if ( contract.ensure instanceof Array )
+            contract.ensure.push( ensureFn );
+        else
+            contract.ensure = [ensureFn];
+    });
+
+
+    function define( name, fn ){
+        Object.defineProperty( Function.prototype, name, {
+            value: function(){
+                var wrapper = getWrapper( this ),
+                    contract = getContract( wrapper );
+                fn.apply( this, [contract].concat(Array.prototype.slice.call(arguments)) );
+                return wrapper;
+            },
+            enumerable: false,
+            configurable: true,
+            writable: true
+        });
     }
-    ContractViolationError.prototype = new Error();
-    ContractViolationError.prototype.constructor = ContractViolationError;
 
 
     function getWrapper( fn ){
@@ -120,63 +139,23 @@
 
     function testInvariant( object, invariant ){
         if ( !invariant.call(object) )
-            throw new ContractViolationError( 'Expected "'+ rule + ' but got ' + result );
+            throw new ContractViolationError( 'Invariant error' );
     }
 
 
-    function define( name, fn ){
-        Object.defineProperty( Function.prototype, name, {
-            value: fn,
+    // new exception type
+    function ContractViolationError( message, constr ){
+        this.message = message;
+        Error.captureStackTrace && Error.captureStackTrace( this, constr || this );
+        Error.apply( this, arguments );
+    }
+    ContractViolationError.prototype = Object.create( Error.prototype, {
+        constructor: {
+            value: ContractViolationError,
             enumerable: false,
-            configurable: true,
-            writable: true
-        });
-    }
-
-
-    define( 'expect', function(){
-        var wrapper = getWrapper( this ),
-            contract = getContract( wrapper );
-
-        contract.expect = Array.prototype.slice.call( arguments );
-
-        return wrapper;
+            writable: true,
+            configurable: true
+        }
     });
-
-
-    define( 'require', function( requireFn ){
-        var wrapper = getWrapper( this ),
-            contract = getContract( wrapper );
-
-        if ( contract.require instanceof Array )
-            contract.require.push( requireFn );
-        else
-            contract.require = [requireFn];
-
-        return wrapper;
-    });
-
-
-    define( 'returns', function( rule ){
-        var wrapper = getWrapper( this ),
-            contract = getContract( wrapper );
-
-        contract.returns = rule;
-
-        return wrapper;
-    });
-
-
-    define( 'ensure', function( ensureFn ){
-        var wrapper = getWrapper( this ),
-            contract = getContract( wrapper );
-
-        if ( contract.ensure instanceof Array )
-            contract.ensure.push( ensureFn );
-        else
-            contract.ensure = [ensureFn];
-
-        return wrapper;
-    });
-
+    ContractViolationError.prototype.name = 'ContractViolationError';
 })();
