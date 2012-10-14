@@ -3,9 +3,9 @@
  * October 2012
  */
 
-(function jsContract(){
+var Contract = (function(){
 
-    var tests = {
+    var test = {
         number: function( val ){
             return typeof val === 'number' || val instanceof Number;
         },
@@ -21,7 +21,7 @@
         arrayLike: function( val ){
             return typeof val === 'object'
                 && val.hasOwnProperty('length')
-                && tests.number( val.length )
+                && test.number( val.length )
                 && val.length >= 0;
         },
         object: function( val ){
@@ -79,7 +79,7 @@
             return fn;
 
         var wrapper = function(){
-            var contract = getContract( fn ),
+            var contract = getContract( wrapper ),
                 object = this || null,
                 invariant = object && object.invariant,
                 result;
@@ -113,8 +113,8 @@
 
     function testExpectations( args, expects ){
         for ( var i = 0; i < expects.length; i++ )
-            if ( !tests[expects[i]](arguments[i]) )
-                throw new TypeError( 'Expected "'+ expects[i] + ' but got ' + arguments[i] );
+            if ( !test[expects[i]](args[i]) )
+                throw new ContractViolationError( 'Expected "'+ expects[i] + '" but got ' + args[i] );
     }
 
 
@@ -126,8 +126,8 @@
 
 
     function testReturns( result, rule ){
-        if ( !tests[rule](result) )
-            throw new TypeError( 'Expected "'+ rule + ' but got ' + result );
+        if ( !test[rule](result) )
+            throw new ContractViolationError( 'Expected "'+ rule + ' but got ' + result );
     }
 
 
@@ -149,7 +149,7 @@
         Error.captureStackTrace && Error.captureStackTrace( this, constr || this );
         Error.apply( this, arguments );
     }
-    ContractViolationError.prototype = Object.create( Error.prototype, {
+    ContractViolationError.prototype = Object.create( TypeError.prototype, {
         constructor: {
             value: ContractViolationError,
             enumerable: false,
@@ -158,4 +158,10 @@
         }
     });
     ContractViolationError.prototype.name = 'ContractViolationError';
+
+
+	return {
+		test: test,
+		ViolationError: ContractViolationError
+	};
 })();
